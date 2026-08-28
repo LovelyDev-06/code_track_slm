@@ -67,6 +67,6 @@ paths:
   results_dir: "logs/results"
 
 hub:
-  repo_id: "swasa26/code-track-ttc-scaling"   # change to your own HF repo
+  repo_id: "swasa26/code-track-ttc-slm"   
   private: true
   push_every_n_problems: 30    # incremental push so a Kaggle session timeout doesn't lose progress
