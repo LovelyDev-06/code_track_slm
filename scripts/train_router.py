@@ -16,7 +16,7 @@ from src.checkpoint_utils import atomic_json_save, load_json_checkpoint
 from src.hub_utils import push_file, download_file
 _FUNCS={"greedy":run_greedy,"best_of_n":run_best_of_n,"tree_search":run_tree_search}
 def main():
- p=argparse.ArgumentParser(); p.add_argument("--model",required=True,choices=["qwen1_5b","qwen7b"]); p.add_argument("--dataset",default="mbpp",choices=["humaneval","mbpp"]); p.add_argument("--split",default="train"); p.add_argument("--limit",type=int,default=60); p.add_argument("--config",default="configs/config.yaml"); p.add_argument("--out",default="checkpoints/router.safetensors"); p.add_argument("--no_push",action="store_true"); a=p.parse_args()
+ p=argparse.ArgumentParser(); p.add_argument("--model",required=True,choices=["qwen1_5b","qwen7b"]); p.add_argument("--dataset",default="mbpp",choices=["humaneval","mbpp"]); p.add_argument("--split",default="train"); p.add_argument("--limit",type=int,default=None); p.add_argument("--config",default="configs/config.yaml"); p.add_argument("--out",default="checkpoints/router.safetensors"); p.add_argument("--no_push",action="store_true"); a=p.parse_args()
  with open(a.config,encoding="utf-8") as f: cfg=yaml.safe_load(f)
  os.makedirs(os.path.dirname(a.out) or ".",exist_ok=True); os.makedirs(cfg["paths"]["checkpoints_dir"],exist_ok=True)
  problems=load_dataset(a.dataset,split=a.split,limit=a.limit); tag=len(problems); progress_path=os.path.join(cfg["paths"]["checkpoints_dir"],f"router_labels_{a.model}_{a.dataset}_{a.split}_limit{tag}.json"); hub_progress=f"checkpoints/{os.path.basename(progress_path)}"
