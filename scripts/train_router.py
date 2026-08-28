@@ -14,7 +14,12 @@ from src.strategies.tree_search import run_tree_search
 from src.strategies.self_consistency import run_self_consistency
 from src.checkpoint_utils import atomic_json_save, load_json_checkpoint
 from src.hub_utils import push_file, download_file
-_FUNCS={"greedy":run_greedy,"best_of_n":run_best_of_n,"tree_search":run_tree_search}
+_FUNCS = {
+    "greedy": run_greedy,
+    "best_of_n": run_best_of_n,
+    "self_consistency": run_self_consistency,
+    "tree_search": run_tree_search,
+}
 def main():
  p=argparse.ArgumentParser(); p.add_argument("--model",required=True,choices=["qwen1_5b","qwen7b"]); p.add_argument("--dataset",default="mbpp",choices=["humaneval","mbpp"]); p.add_argument("--split",default="train"); p.add_argument("--limit",type=int,default=None); p.add_argument("--config",default="configs/config.yaml"); p.add_argument("--out",default="checkpoints/router.safetensors"); p.add_argument("--no_push",action="store_true"); a=p.parse_args()
  with open(a.config,encoding="utf-8") as f: cfg=yaml.safe_load(f)
