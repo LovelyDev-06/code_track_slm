@@ -23,18 +23,55 @@ _FUNCS = {
 def main():
  p=argparse.ArgumentParser(); p.add_argument("--model",required=True,choices=["qwen1_5b","qwen7b"]); p.add_argument("--dataset",default="mbpp",choices=["humaneval","mbpp"]); p.add_argument("--split",default="train"); p.add_argument("--limit",type=int,default=None); p.add_argument("--config",default="configs/config.yaml"); p.add_argument("--out",default="checkpoints/router.safetensors"); p.add_argument("--no_push",action="store_true"); a=p.parse_args()
  with open(a.config,encoding="utf-8") as f: cfg=yaml.safe_load(f)
+ push_every_n = cfg["hub"].get("push_every_n_problems", 30)
  os.makedirs(os.path.dirname(a.out) or ".",exist_ok=True); os.makedirs(cfg["paths"]["checkpoints_dir"],exist_ok=True)
  problems=load_dataset(a.dataset,split=a.split,limit=a.limit); tag=len(problems); progress_path=os.path.join(cfg["paths"]["checkpoints_dir"],f"router_labels_{a.model}_{a.dataset}_{a.split}_limit{tag}.json"); hub_progress=f"checkpoints/{os.path.basename(progress_path)}"
  if not os.path.exists(progress_path) and not a.no_push: download_file(cfg,hub_progress,progress_path)
  completed=load_json_checkpoint(progress_path).get("completed",{}) if os.path.exists(progress_path) else {}
  model,tokenizer,num_params=load_model_and_tokenizer(a.model,cfg); strategies=cfg["router"]["strategies_available"]; lam=cfg["router"]["cost_penalty_lambda"]
- for i,problem in enumerate(problems,1):
-  pid=problem["problem_id"]; completed.setdefault(pid,{})
-  for strategy in strategies:
-   if strategy in completed[pid]: continue
-   print(f"[{i}/{len(problems)}] {pid} -> {strategy}"); l=FlopLedger(); r=_FUNCS[strategy](model,tokenizer,num_params,[problem],cfg,l)[0]; fr=l.as_dicts()[0]
-   completed[pid][strategy]={"passed":bool(r["passed"]),"flops":float(fr["estimated_flops"])}; atomic_json_save({"version":3,"completed":completed,"metadata":{"model":a.model,"dataset":a.dataset,"split":a.split,"limit":tag}},progress_path)
-   if not a.no_push: push_file(progress_path,cfg,hub_progress)
+ 
+ for i, problem in enumerate(problems, 1):
+    pid = problem["problem_id"]
+    completed.setdefault(pid, {})
+
+    for strategy in strategies:
+        if strategy in completed[pid]:
+            continue
+
+        print(f"[{i}/{len(problems)}] {pid} -> {strategy}")
+
+        l = FlopLedger()
+        r = _FUNCS[strategy](
+            model, tokenizer, num_params, [problem], cfg, l
+        )[0]
+        fr = l.as_dicts()[0]
+
+        completed[pid][strategy] = {
+            "passed": bool(r["passed"]),
+            "flops": float(fr["estimated_flops"]),
+        }
+
+        # Save locally after every strategy
+        atomic_json_save(
+            {
+                "version": 3,
+                "completed": completed,
+                "metadata": {
+                    "model": a.model,
+                    "dataset": a.dataset,
+                    "split": a.split,
+                    "limit": tag,
+                },
+            },
+            progress_path,
+        )
+
+    # Push after every N fully completed problems
+    if not a.no_push and (
+        i % push_every_n == 0 or i == len(problems)
+    ):
+        print(f"Pushing progress checkpoint after {i} problems...")
+        push_file(progress_path, cfg, hub_progress)
  all_flops=[completed[pb["problem_id"]][st]["flops"] for pb in problems for st in strategies]; max_flops=max(all_flops) if all_flops else 1.0; labels=[]
  for problem in problems:
   rec=completed[problem["problem_id"]]; best=max(strategies,key=lambda st:(1.0 if rec[st]["passed"] else 0.0)-lam*(rec[st]["flops"]/max_flops)); labels.append(strategies.index(best))
