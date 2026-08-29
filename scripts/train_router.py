@@ -21,7 +21,7 @@ _FUNCS = {
     "tree_search": run_tree_search,
 }
 def main():
- p=argparse.ArgumentParser(); p.add_argument("--model",required=True,choices=["qwen1_5b","qwen7b"]); p.add_argument("--dataset",default="mbpp",choices=["mbpp"]); p.add_argument("--split",default="train"); p.add_argument("--limit",type=int,default=500); p.add_argument("--config",default="configs/config.yaml"); p.add_argument("--out",default="checkpoints/router.safetensors"); p.add_argument("--no_push",action="store_true"); a=p.parse_args()
+ p=argparse.ArgumentParser(); p.add_argument("--model",required=True,choices=["qwen1_5b","qwen7b"]); p.add_argument("--dataset",default="mbpp",choices=["mbpp"]); p.add_argument("--split",default="train"); p.add_argument("--limit",type=int,default=None); p.add_argument("--config",default="configs/config.yaml"); p.add_argument("--out",default="checkpoints/router.safetensors"); p.add_argument("--no_push",action="store_true"); a=p.parse_args()
  with open(a.config,encoding="utf-8") as f: cfg=yaml.safe_load(f)
  push_every_n = cfg["hub"].get("push_every_n_problems", 30)
  os.makedirs(os.path.dirname(a.out) or ".",exist_ok=True); os.makedirs(cfg["paths"]["checkpoints_dir"],exist_ok=True)
